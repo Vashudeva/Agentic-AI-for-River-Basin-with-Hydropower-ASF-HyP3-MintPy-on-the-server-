@@ -1,0 +1,79 @@
+# =============================================================================
+# kgproc, HyP3 route (Windows, no admin rights, no Linux):
+#   ASF HyP3 burst interferograms (ISCE2 run by ASF, 5x1 looks ~ 20 m, small-baseline network)
+#   -> MintPy on GEOK_Lab1 -> points in the agent's format -> comparison with SARscape E-SBAS.
+# Everything is installed and written inside G:\InSAR\Kaligandaki\Langgraph.
+# Run through kg.cmd (it passes this file):  kg check | kg hyp3-search | ...
+# =============================================================================
+route = "hyp3"
+
+[paths]
+work_dir      = 'G:\InSAR\Kaligandaki\Langgraph\opensource_work'     # HyP3 downloads, MintPy, logs
+export_dir    = 'G:\InSAR\Kaligandaki\Langgraph\opensource'          # points, report, agent settings
+sarscape_root = 'G:\InSAR\Kaligandaki\Sarscape'                      # read-only
+agent_dir     = 'G:\InSAR\Kaligandaki\Langgraph\insar-hydro-agent\agent'
+
+# The SARscape dates (connection-graph report) and crop windows define what is processed.
+[tracks.ascending]
+relative_orbit   = 158
+pass_direction   = "ASCENDING"
+swath            = 2
+reference_date   = "20221010"
+window_snwe      = [27.89, 28.07, 83.48, 83.68]
+sarscape_dates   = "ASC/2_ESBAS_processing/connection_graph/CG_report.txt"
+sarscape_product = "ASC/2_ESBAS_processing/geocoding/2_PS_DS_75_0.shp"
+
+[tracks.descending]
+relative_orbit   = 92
+pass_direction   = "DESCENDING"
+swath            = 1
+reference_date   = "20220912"
+window_snwe      = [27.94, 28.07, 83.50, 83.67]
+sarscape_dates   = "DSC/2_ESBAS_processing/connection_graph/CG_report.txt"
+sarscape_product = "DSC/2_ESBAS_processing/geocoding/2_PS_DS_75_0.shp"
+
+[sarscape_decomposed]
+vertical = "shape combination/S-BAS/ASC_DSC2_PS_DS_75_0_decomposed_vertical.shp"
+east     = "shape combination/S-BAS/ASC_DSC2_PS_DS_75_0_decomposed_east.shp"
+
+# -----------------------------------------------------------------------------
+[hyp3]
+looks             = "5x1"        # "5x1" (~20 m), "10x2" (~40 m), "20x4" (~80 m)
+connections       = 3            # each date with its 3 next dates
+annual_pairs      = true         # plus, per date, the pair closest to one year (330-400 days)
+annual_days       = [330, 400]
+apply_water_mask  = false        # HyP3 option: mask large water bodies before unwrapping
+job_name_prefix   = "kali"       # jobs are named kali_asc_158 / kali_des_92
+keep_zips         = false        # delete each product zip after the window has been cut out
+wait_hours        = 24           # hyp3-download --wait gives up after this
+unwrap_error_correction = "no"   # MintPy: "no", "bridging", "phase_closure" or "bridging+phase_closure"
+
+# -----------------------------------------------------------------------------
+[mintpy]
+reference_lalo       = [27.9646, 83.5435]   # one reference for both tracks (SARscape's descending reference point)
+troposphere          = ["no", "pyaps"]      # variants; "pyaps" = ERA5 (kg set-cds-key), "gacos" needs gacos_dir
+gacos_dir            = ""
+weather_dir          = ""                   # ERA5 files; empty = <work_dir>\weather
+topographic_residual = true
+deramp               = "no"
+geocode_snwe         = [27.89, 28.07, 83.48, 83.68]   # lat/lon grid of the comparison (the SARscape grid)
+geocode_step_deg     = 0.000125
+max_memory_gb        = 8
+
+# -----------------------------------------------------------------------------
+[export]
+min_tcoh        = 0.7      # native points: minimum temporal coherence
+thin_cell_m     = 30       # native points: the most coherent pixel per 30 m cell (HyP3 pixels are ~20 m)
+max_points      = 60000
+sample_min_tcoh = 0.5      # values at the SARscape points
+sample_search_m = 25       # the pixel under a SARscape point if coherent enough, else the most coherent within 25 m
+offset_scan_m   = 60
+offset_step_m   = 10
+
+[compare]
+reference      = "headworks"
+far_field_m    = 1000
+sample_points  = 3000
+seed           = 0
+headworks_lon  = 83.58004
+headworks_lat  = 27.97792

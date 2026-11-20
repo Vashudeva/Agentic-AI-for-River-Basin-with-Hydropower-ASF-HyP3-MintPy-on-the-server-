@@ -1,0 +1,42 @@
+# Conda environment for kgproc (Linux / WSL2). Created by setup_env.sh.
+# Versions checked on 20 Nov 2026: isce2 2.6.5, mintpy 1.6.4, MiaplPy 0.2.1 (GitHub).
+name: kali-insar
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - isce2=2.6.5          # topsStack: coregistered Sentinel-1 SLC stack
+  - mintpy=1.6.4         # network inversion, corrections, geocoding, decomposition helpers
+  - snaphu               # SNAPHU unwrapper (binary is linked into bin/ by setup_env.sh)
+  - sardem               # Copernicus GLO-30 DEM, ellipsoidal heights, ISCE2 xml
+  - sentineleof          # precise orbits
+  - gdal
+  - h5py
+  - numpy
+  - scipy
+  - pandas
+  - geopandas
+  - pyogrio
+  - shapely>=2
+  - pyproj
+  - rasterio
+  - matplotlib
+  # MiaplPy dependencies
+  - c-compiler
+  - cython
+  - cvxopt
+  - dask
+  - dask-jobqueue
+  - defusedxml
+  - lxml
+  - numba
+  - pulp
+  - pyaps3>=0.3          # ERA5 tropospheric correction (needs ~/.cdsapirc)
+  - pykml
+  - pyresample
+  - pysolid
+  - scikit-image
+  - natsort
+  - cartopy
+  - setuptools
+  - pip

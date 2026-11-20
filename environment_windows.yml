@@ -1,0 +1,23 @@
+# Conda environment for the HyP3 route on Windows (created by setup_windows.cmd, no admin rights).
+# Solved for win-64 on 20 Nov 2026: mintpy 1.6.4, hyp3_sdk 7.7.8, asf_search 14.1.0, gdal 3.13.
+name: kali-hyp3
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - mintpy=1.6.4
+  - hyp3_sdk
+  - asf_search
+  - gdal
+  - h5py
+  - numpy
+  - scipy
+  - pandas
+  - geopandas
+  - pyogrio
+  - shapely>=2
+  - pyproj
+  - matplotlib
+  - pyaps3          # ERA5 correction
+  - cdsapi
+  - truststore      # certificate checks through the Windows certificate store

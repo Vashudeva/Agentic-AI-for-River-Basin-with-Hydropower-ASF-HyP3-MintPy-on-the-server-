@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+# never commit credentials or processing outputs
+*.dpapi
+earthdata_token
+.cdsapirc
+opensource_work/
+opensource/
+selfcheck_example/
+*.h5
+*.gpkg
+*.zip
+*.tif

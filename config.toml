@@ -1,0 +1,112 @@
+# =============================================================================
+# kgproc - open-source re-processing of the Kali Gandaki A analysis window
+#   ISCE2 topsStack (coregistered full-resolution SLC stack)
+#   -> MiaplPy (PS + DS phase linking, single-reference network, SNAPHU)
+#   -> MintPy (network inversion, corrections, geocoding)
+#   -> point products in the agent's format, and a comparison with SARscape E-SBAS.
+#
+# Runs in Linux (WSL2 on the lab PC). Paths are Linux paths: G:\ is /mnt/g.
+# Lines marked EDIT need your values; everything else reproduces the SARscape run.
+# =============================================================================
+
+[paths]
+# Heavy processing (ISCE2 + MiaplPy, ~100-150 GB per track). Keep it on the Linux
+# file system of the WSL distribution: it is much faster than /mnt/g. If the
+# distribution was imported into G:\InSAR\Kaligandaki\Langgraph\wsl, these files
+# physically stay inside that folder.
+work_dir      = "~/kali_work"                                           # EDIT if you like
+# Light outputs read by the Windows agent (point GeoPackages, report, settings files).
+export_dir    = "/mnt/g/InSAR/Kaligandaki/Langgraph/opensource"
+# SARscape products, opened read-only.
+sarscape_root = "/mnt/g/InSAR/Kaligandaki/Sarscape"
+# The agent folder (used to copy its site register and settings for the comparison runs).
+agent_dir     = "/mnt/g/InSAR/Kaligandaki/Langgraph/insar-hydro-agent/agent"
+
+# -----------------------------------------------------------------------------
+# One block per stack. Keys must stay "ascending" / "descending" (agent names).
+[tracks.ascending]
+slc_dir          = "/mnt/g/InSAR/Kaligandaki/S1_SLC"     # EDIT: folder with the original S1*_IW_SLC__1S*.zip (or .SAFE); both tracks may share it
+slc_recursive    = true                                   # also look in sub-folders
+relative_orbit   = 158
+pass_direction   = "ASCENDING"
+swath            = 2                                      # IW2, as in SARscape
+reference_date   = "20221010"                             # SARscape reference image
+window_snwe      = [27.89, 28.07, 83.48, 83.68]           # SARscape crop of this stack (S, N, W, E)
+sarscape_dates   = "ASC/2_ESBAS_processing/connection_graph/CG_report.txt"
+sarscape_product = "ASC/2_ESBAS_processing/geocoding/2_PS_DS_75_0.shp"
+
+[tracks.descending]
+slc_dir          = "/mnt/g/InSAR/Kaligandaki/S1_SLC"     # EDIT
+slc_recursive    = true
+relative_orbit   = 92
+pass_direction   = "DESCENDING"
+swath            = 1                                      # IW1, as in SARscape
+reference_date   = "20220912"
+window_snwe      = [27.94, 28.07, 83.50, 83.67]
+sarscape_dates   = "DSC/2_ESBAS_processing/connection_graph/CG_report.txt"
+sarscape_product = "DSC/2_ESBAS_processing/geocoding/2_PS_DS_75_0.shp"
+
+[sarscape_decomposed]
+vertical = "shape combination/S-BAS/ASC_DSC2_PS_DS_75_0_decomposed_vertical.shp"
+east     = "shape combination/S-BAS/ASC_DSC2_PS_DS_75_0_decomposed_east.shp"
+
+# -----------------------------------------------------------------------------
+[isce]
+polarization    = "vv"
+coregistration  = "NESD"       # "NESD" (geometry + enhanced spectral diversity) or "geometry"
+num_proc        = 4            # parallel commands per ISCE2 run file
+orbit_source    = "asf"        # "asf" (public, no account) or "esa" (Copernicus Data Space account, asked interactively)
+dem_file        = ""           # optional: your own DEM (ENVI/GeoTIFF, WGS84 ELLIPSOIDAL heights). Empty = Copernicus GLO-30 via sardem
+dem_margin_deg  = 0.3          # DEM margin around the burst footprints
+cleanup         = false        # delete ISCE2 intermediate folders after the merged SLC stack is checked
+
+# -----------------------------------------------------------------------------
+[miaplpy]
+num_processor   = 4
+patch_size      = 200
+ministack_size  = 10
+range_window    = 19           # SHP search window (range x azimuth pixels). 19 x 5 is about 70 m x 70 m on the ground
+azimuth_window  = 5
+shp_test        = "ks"
+phase_linking   = "sequential_EMI"
+network         = "single_reference"   # same graph as the SARscape E-SBAS run: one reference image (reference_date)
+min_temp_coh    = 0.5
+
+# -----------------------------------------------------------------------------
+[mintpy]
+# One reference for both tracks: required for the decomposition. SARscape used two
+# (ascending 83.5724E 28.0135N, 1,593 m; descending 83.5435E 27.9646N, 739 m).
+# The descending one lies in both windows. Must be a coherent pixel in both stacks.
+reference_lalo       = [27.9646, 83.5435]
+# Each entry is one product variant (one full set of points):
+#   "no"                 no tropospheric correction
+#   "pyaps"              ERA5 via PyAPS (needs a Copernicus Climate Data Store key in ~/.cdsapirc)
+#   "gacos"              GACOS (put the GACOS .ztd files for every date in gacos_dir)
+#   "height_correlation" phase-elevation ratio estimated from the data
+troposphere          = ["no", "pyaps"]
+gacos_dir            = ""
+weather_dir          = ""      # ERA5 download folder; empty = <work_dir>/weather
+topographic_residual = true    # DEM error correction (SARscape E-SBAS also estimates a height correction)
+deramp               = "no"    # "no", "linear" or "quadratic"
+geocode_snwe         = [27.89, 28.07, 83.48, 83.68]   # one grid for both tracks (union of the windows)
+geocode_step_deg     = 0.000125                       # SARscape geocoding step (about 14 m x 12 m)
+max_memory_gb        = 8
+
+# -----------------------------------------------------------------------------
+[export]
+min_tcoh        = 0.7      # native products: minimum temporal coherence
+thin_cell_m     = 30       # native products: keep the most coherent pixel per cell
+max_points      = 60000    # native products: upper limit (the most coherent are kept)
+sample_min_tcoh = 0.5      # products sampled at the SARscape points
+sample_search_m = 15       # the pixel containing a SARscape point if coherent enough, else the most coherent one within this distance
+offset_scan_m   = 45       # geolocation check: half-width of the shift grid
+offset_step_m   = 5
+
+# -----------------------------------------------------------------------------
+[compare]
+reference      = "headworks"   # re-reference both products to the median of zones A-F ("window" = window median)
+far_field_m    = 1000
+sample_points  = 3000          # far-field sample for the elevation gradient (as in the agent)
+seed           = 0
+headworks_lon  = 83.58004
+headworks_lat  = 27.97792
